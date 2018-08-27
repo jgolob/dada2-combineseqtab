@@ -7,6 +7,7 @@ from rpy2.robjects import pandas2ri
 import argparse
 import logging
 import sys
+import rpy2
 
 
 def main():
@@ -17,7 +18,7 @@ def main():
         '--seqtabs', '-s',
         help="Sequence tables from dada2, in RDS format",
         nargs='+',
-        required=True, type=argparse.FileType('r'))
+        required=True)
     args_parser.add_argument(
         '--rds', '-R',
         help='Combined Seqtable (RDS out)')
