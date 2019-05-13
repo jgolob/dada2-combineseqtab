@@ -1,6 +1,6 @@
 # dada2-fast-combineseqtab
 #
-# VERSION               0.1.0_BCW_0.30
+# VERSION               0.2.0_BCW_0.30
 
 FROM      ubuntu:18.04
 # For singularity on the hutch cluster
@@ -21,7 +21,7 @@ RUN ln -s /usr/bin/python3 /usr/local/bin/python
 
 RUN apt-key adv --keyserver keyserver.ubuntu.com --recv-keys E298A3A825C0D65DFD57CBB651716619E084DAB9 && \
 add-apt-repository 'deb https://cloud.r-project.org/bin/linux/ubuntu bionic-cran35/'
-RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get install -y r-base=3.5.1-1bionic
+RUN apt-get update && export DEBIAN_FRONTEND=noninteractive && apt-get install -y r-base
 RUN pip3 install pip --upgrade
 RUN pip3 install \
 rpy2==2.9.4 \

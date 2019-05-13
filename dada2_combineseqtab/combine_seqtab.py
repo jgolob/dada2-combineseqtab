@@ -58,21 +58,21 @@ def main():
                     for p in
                     zip(R_base.colnames(seqtab), seqtab[sp_idx:])
                 }
-        logging.info("Converting to DataFrame")
-        combined_seqtab_df = pd.DataFrame.from_dict(combined_seqtab_dict, dtype=np.int64)
-        combined_seqtab_df.fillna(0, inplace=True)
-        combined_seqtab_df = combined_seqtab_df.astype(np.int64)
+    logging.info("Converting to DataFrame")
+    combined_seqtab_df = pd.DataFrame.from_dict(combined_seqtab_dict, dtype=np.int64)
+    combined_seqtab_df.fillna(0, inplace=True)
+    combined_seqtab_df = combined_seqtab_df.astype(np.int64)
 
-        if args.csv:
-            logging.info("Writing combined seqtab to CSV")
-            combined_seqtab_df.T.to_csv(args.csv)
+    if args.csv:
+        logging.info("Writing combined seqtab to CSV")
+        combined_seqtab_df.T.to_csv(args.csv)
 
-        if args.rds:
-            logging.info("Writing out RDS combined seqtab")
-            logging.info("Converting back to R matrix")
-            combined_seqtab_R_df = pandas2ri.py2ri(combined_seqtab_df.T)
-            combined_seqtab_R_mat = R_base.as_matrix(combined_seqtab_R_df)
-            R_base.saveRDS(combined_seqtab_R_mat, args.rds)
+    if args.rds:
+        logging.info("Writing out RDS combined seqtab")
+        logging.info("Converting back to R matrix")
+        combined_seqtab_R_df = pandas2ri.py2ri(combined_seqtab_df.T)
+        combined_seqtab_R_mat = R_base.as_matrix(combined_seqtab_R_df)
+        R_base.saveRDS(combined_seqtab_R_mat, args.rds)
 
 # Boilerplate method to run this as a script
 if __name__ == '__main__':
