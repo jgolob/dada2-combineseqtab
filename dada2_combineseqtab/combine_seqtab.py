@@ -53,17 +53,22 @@ def main():
                 seqtab_fn
             ))
             continue
-        for sp_idx, spec in enumerate(R_base.rownames(seqtab)):
-            if R_base.colnames(seqtab) is rpy2.rinterface.NULL:
-                logging.info("{} had no sequence variants".format(spec))
+        # Implicit else
+        specimens = list(R_base.rownames(seqtab))
+        if R_base.colnames(seqtab) is rpy2.rinterface.NULL:
+            logging.info("{} had no sequence variants".format(seqtab_fn))
+            for spec in specimens:
                 combined_seqtab_dict[spec] = {}
-            else:
-                combined_seqtab_dict[spec] = {
-                    p[0]: p[1]
-                    for p in
-                    zip(seq_variants, seqtab.rx(sp_idx+1, True))
-                    if p[1] != 0
-                }
+            continue
+        # Implicit else
+        seq_variants = list(R_base.colnames(seqtab))
+        for sp_idx, spec in enumerate(specimens):
+            combined_seqtab_dict[spec] = {
+                p[0]: p[1]
+                for p in
+                zip(seq_variants, seqtab.rx(sp_idx+1, True))
+                if p[1] != 0
+            }
     logging.info("Converting to DataFrame")
     combined_seqtab_df = pd.DataFrame.from_dict(combined_seqtab_dict).fillna(0).astype(np.int64).T
 
