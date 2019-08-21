@@ -62,6 +62,7 @@ def main():
                     p[0]: p[1]
                     for p in
                     zip(seq_variants, seqtab.rx(sp_idx+1, True))
+                    if p[1] != 0
                 }
     logging.info("Converting to DataFrame")
     combined_seqtab_df = pd.DataFrame.from_dict(combined_seqtab_dict).fillna(0).astype(np.int64).T
