@@ -48,6 +48,11 @@ def main():
                 e)
             )
             continue
+        if R_base.rownames(seqtab) is rpy2.rinterface.NULL:
+            logging.error("No specimens in {}".format(
+                seqtab_fn
+            ))
+            continue
         for sp_idx, spec in enumerate(R_base.rownames(seqtab)):
             if R_base.colnames(seqtab) is rpy2.rinterface.NULL:
                 logging.info("{} had no sequence variants".format(spec))
@@ -66,13 +71,17 @@ def main():
     if args.csv:
         logging.info("Writing combined seqtab to CSV")
         combined_seqtab_df.T.to_csv(args.csv)
+        logging.info("Completed CSV output")
 
     if args.rds:
         logging.info("Writing out RDS combined seqtab")
-        logging.info("Converting back to R matrix")
+        logging.info("Converting back to R DataFrame")
         combined_seqtab_R_df = pandas2ri.py2ri(combined_seqtab_df.T)
+        logging.info("Converting into an R Matrix")
         combined_seqtab_R_mat = R_base.as_matrix(combined_seqtab_R_df)
+        logging.info("Saving to RDS")
         R_base.saveRDS(combined_seqtab_R_mat, args.rds)
+        logging.info("Completed RDS output")
 
 # Boilerplate method to run this as a script
 if __name__ == '__main__':

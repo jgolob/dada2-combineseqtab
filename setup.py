@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='dada2-fast-combineseqtab',
-    version='0.1.0',
+    version='0.3.0',
     description="""Fast combination of sequence tables from DADA2
       """,
     url='',
@@ -12,7 +12,7 @@ setup(
     packages=['dada2_fast_combineseqtab'],
     zip_safe=False,
     install_requires=[
-        'rpy2>=2.9.4',
+        'rpy2==2.9.5',
         'numpy>=1.15.0',
         'pandas>=0.23.4'
     ],
