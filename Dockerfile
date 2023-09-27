@@ -1,6 +1,6 @@
 # dada2-fast-combineseqtab
 #
-# VERSION               golob/dada2-fast-combineseqtab:0.5.0__1.12.0__BCW_0.3.1
+# VERSION               golob/dada2-fast-combineseqtab:0.5.1__1.12.0__BCW_0.3.1
 
 FROM      golob/dada2:1.12.0.ub.1804__bcw.0.3.1
 
