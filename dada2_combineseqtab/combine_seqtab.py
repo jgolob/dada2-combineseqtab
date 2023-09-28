@@ -8,6 +8,7 @@ import argparse
 import logging
 import sys
 import rpy2
+import scipy as sp
 
 
 def main():
@@ -34,7 +35,13 @@ def main():
     # Implicit else
     R_base = importr('base')
     seqtabs = args.seqtabs
-    combined_seqtab_dict = {}
+    # Will plan on storing things in sparse format to save on memory
+    # A list to store specimen IDs
+    specimen_ids = []
+    # A list to store sequences
+    sequence_variants = []
+    # A list to store the COORdinates data [data, (i,j) ]
+    coo_data = []
     for seqtab_i, seqtab_fn in enumerate(seqtabs):
         logging.info("Adding seqtab {:,} of {:,}".format(
             seqtab_i + 1,
@@ -53,23 +60,56 @@ def main():
                 seqtab_fn
             ))
             continue
-        # Implicit else
         specimens = list(R_base.rownames(seqtab))
-        if R_base.colnames(seqtab) is rpy2.rinterface.NULL:
-            logging.info("{} had no sequence variants".format(seqtab_fn))
-            for spec in specimens:
-                combined_seqtab_dict[spec] = {}
+        # Great see if the specimens have an overlap
+        if len(set(specimen_ids).intersection(set(specimens))) > 0:
+            logging.error(
+                ", ".join(set(specimen_ids).intersection(set(specimens)))+f" \nspecimens from {seqtab_fn} are duplicates and will be skipped."
+                )
             continue
         # Implicit else
-        seq_variants = list(R_base.colnames(seqtab))
-        for sp_idx, spec in enumerate(specimens):
-            combined_seqtab_dict[spec] = {
-                p[0]: p[1]
-                for p in
-                zip(seq_variants, seqtab.rx(sp_idx+1, True))
-                if p[1] != 0
-            }
-    logging.info("Converting to DataFrame")
+
+        if R_base.colnames(seqtab) is rpy2.rinterface.NULL:
+            logging.info("{} had no sequence variants".format(seqtab_fn))
+            continue
+        # Implicit else
+        file_seq_variants = list(R_base.colnames(seqtab))
+        # Update the master lists of sv...
+        sequence_variants += [sv for sv in file_seq_variants if sv not in sequence_variants]
+        # .. and specimens
+        specimen_ids += [sp for sp in specimens if sp not in specimen_ids]
+
+        for (i, sp) in enumerate(specimens):
+            sp_idx = specimen_ids.index(sp)
+            coo_data += [
+                (
+                    svc,
+                    (
+                        sp_idx,
+                        sequence_variants.index(
+                            file_seq_variants[j]
+                        ) 
+                    )
+                )
+                for (j, svc) in
+                enumerate(
+                    seqtab.rx(i+1, True)
+                )
+                if svc != 0
+            ]
+    logging.info("Converting to Sparse DataFrame")            
+    sp.sparse.coo_matrix(
+        (
+            [d[0] for d in coo_data],
+            (
+                [d[1][0] for d in coo_data],
+                [d[1][1] for d in coo_data],
+            )
+        ),
+        dtype=int,
+        shape=(len(specimen_ids), len(sequence_variants))
+    )
+
     combined_seqtab_df = pd.DataFrame.from_dict(combined_seqtab_dict).fillna(0).astype(np.int64).T
 
     if args.csv:
