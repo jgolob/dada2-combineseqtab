@@ -4,11 +4,12 @@ import numpy as np
 import pandas as pd
 from rpy2.robjects.packages import importr
 import rpy2.robjects as ro
+from rpy2.robjects import pandas2ri
 import argparse
 import logging
 import sys
 import rpy2
-import scipy as sp
+import scipy 
 
 
 def main():
@@ -99,7 +100,7 @@ def main():
 
     logging.info("Converting to Sparse DataFrame")            
     combined_seqtab_df = pd.DataFrame.sparse.from_spmatrix(
-            sp.sparse.coo_matrix(
+            scipy.sparse.coo_matrix(
             (
                 [d[0] for d in coo_data],
                 (
@@ -122,6 +123,7 @@ def main():
     if args.rds:
         logging.info("Writing out RDS combined seqtab")
         logging.info("Converting back to R DataFrame")
+        pandas2ri.activate()
         combined_seqtab_R_df = ro.conversion.py2rpy(
             combined_seqtab_df.sparse.to_dense()
             )
