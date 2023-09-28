@@ -9,10 +9,10 @@ setup(
     author='Jonathan Golob',
     author_email='j-dev@golob.org',
     license='MIT',
-    packages=['dada2_fast_combineseqtab'],
+    #packages=['dada2-fast-combineseqtab'],
     zip_safe=False,
     install_requires=[
-        'rpy2==2.9.5',
+        'rpy2>=3.5.14',
         'numpy>=1.15.0',
         'pandas>=0.23.4'
     ],
