@@ -1,9 +1,9 @@
 # dada2-fast-combineseqtab
 #
-# VERSION               golob/dada2-fast-combineseqtab:0.6.0
+# VERSION               golob/dada2-fast-combineseqtab:0.6.5
 
 
-FROM --platform=amd64 debian:bullseye-slim
+FROM --platform=amd64 debian:bookworm-slim
 
 RUN export TZ=Etc/UTC
 RUN DEBIAN_FRONTEND=noninteractive TZ=Etc/UTC apt-get update && \
@@ -19,7 +19,7 @@ apt-get install -y \
 ADD . /src/
 
 RUN cd /src/ && \
-pip3 install . && \
+pip3 install --break-system-packages . && \
 cd /root/
 
 WORKDIR /root/

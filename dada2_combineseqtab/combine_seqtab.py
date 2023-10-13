@@ -1,16 +1,109 @@
 #!/usr/bin/env python
-import os
 import numpy as np
 import pandas as pd
-from rpy2.robjects.packages import importr
-import rpy2.robjects as ro
-from rpy2.robjects import pandas2ri
 import argparse
 import logging
 import sys
-import rpy2
-import scipy 
+import scipy
+import pyreadr
+from rpy2.robjects.packages import importr
+import rpy2.robjects as ro
+from rpy2.robjects import pandas2ri
 
+
+def R_seqtab_toLong(seqtab_fn):
+    try:
+        seqtab = pyreadr.read_r(seqtab_fn)[None]
+    except Exception as e:
+        logging.error("Could not load seqtab {} with error {}".format(
+            seqtab_fn,
+            e)
+        )
+        return None
+    # Implicit else
+    if len(seqtab) == 0:
+        logging.error("No specimens in {}".format(
+            seqtab_fn
+        ))
+        return None
+    # Implicit else
+    if len(seqtab.columns) == 0:
+        logging.info("{} had no sequence variants".format(seqtab_fn))
+        return None
+    # Implicit else
+    # Convert to long format
+    stl = seqtab.melt(
+        ignore_index=False,
+        var_name='sv',
+        value_name='count'
+    ).reset_index().rename({'index': 'specimen'}, axis=1)
+    # Slice away zero values
+    return stl[stl['count'] > 0]
+
+def load_seqtabs(seqtabs):
+    # Will plan on storing things in sparse format to save on memory
+    # A list to store specimen IDs
+    specimen_ids = []
+    # A list to store sequences
+    sequence_variants = []
+    # A list to store the COORdinates data [data, (i,j) ]
+    coo_data = []
+    for seqtab_i, seqtab_fn in enumerate(seqtabs):
+        logging.info("Adding seqtab {:,} of {:,}".format(
+            seqtab_i + 1,
+            len(seqtabs)
+        ))
+        stl = R_seqtab_toLong(seqtab_fn)
+        if stl is None:
+            continue
+        # Implicit else
+        file_specimens = set(stl.specimen)
+        file_seq_variants = list(stl.sv)
+        logging.info("Updating master lists and indicies of specimens and sequence variants.")
+        if len(set(specimen_ids).intersection(file_specimens)) > 0:
+            logging.warn("Duplicated specimen IDs encountered and will be combined")
+        # Update the master lists of sv...
+        sequence_variants += [sv for sv in file_seq_variants if sv not in sequence_variants]
+        # .. and specimens
+        specimen_ids += [sp for sp in file_specimens if sp not in specimen_ids]
+        # and rapid lookup indicies
+        sv_idx = {
+            sv: i for (i, sv) in enumerate(sequence_variants)
+        }
+        sp_idx = {
+            sp: i for (i, sp) in enumerate(specimen_ids)
+        }
+
+        coo_data += [
+            (
+                r['count'],
+                (
+                    sp_idx.get(r['specimen']),
+                    sv_idx.get(r['sv'])
+                )
+            )
+            for i, r in stl.iterrows()
+        ]
+
+    logging.info("Converting to Sparse DataFrame")            
+    combined_seqtab_df = pd.DataFrame.sparse.from_spmatrix(
+            scipy.sparse.coo_matrix(
+            (
+                [d[0] for d in coo_data],
+                (
+                    [d[1][0] for d in coo_data],
+                    [d[1][1] for d in coo_data],
+                )
+            ),
+            dtype=int,
+            shape=(len(specimen_ids), len(sequence_variants))
+        ),
+        index=specimen_ids,
+        columns=sequence_variants,
+    )
+
+    return combined_seqtab_df
+       
 
 def main():
     logging.basicConfig(format='Combine Seqtab:%(levelname)s:%(asctime)s:%(message)s', level=logging.INFO)
@@ -33,87 +126,9 @@ def main():
         logging.error("No output selected. Exiting")
         sys.exit("Nothing to do.")
     # Implicit else
-    R_base = importr('base')
     seqtabs = args.seqtabs
-    # Will plan on storing things in sparse format to save on memory
-    # A list to store specimen IDs
-    specimen_ids = []
-    # A list to store sequences
-    sequence_variants = []
-    # A list to store the COORdinates data [data, (i,j) ]
-    coo_data = []
-    for seqtab_i, seqtab_fn in enumerate(seqtabs):
-        logging.info("Adding seqtab {:,} of {:,}".format(
-            seqtab_i + 1,
-            len(seqtabs)
-        ))
-        try:
-            seqtab = R_base.readRDS(seqtab_fn)
-        except Exception as e:
-            logging.error("Could not load seqtab {} with error {}".format(
-                seqtab_fn,
-                e)
-            )
-            continue
-        if R_base.rownames(seqtab) is rpy2.rinterface.NULL:
-            logging.error("No specimens in {}".format(
-                seqtab_fn
-            ))
-            continue
-        # Implicit else
-        specimens = list(R_base.rownames(seqtab))        
-        # Great see if the specimens have an overlap
-        if len(set(specimen_ids).intersection(set(specimens))) > 0:
-            logging.error(
-                ", ".join(set(specimen_ids).intersection(set(specimens)))+f" \nspecimens from {seqtab_fn} are duplicates and will be skipped."
-                )
-            continue
 
-        if R_base.colnames(seqtab) is rpy2.rinterface.NULL:
-            logging.info("{} had no sequence variants".format(seqtab_fn))
-            continue
-        # Implicit else
-        file_seq_variants = list(R_base.colnames(seqtab))
-        # Update the master lists of sv...
-        sequence_variants += [sv for sv in file_seq_variants if sv not in sequence_variants]
-        # .. and specimens
-        specimen_ids += [sp for sp in specimens if sp not in specimen_ids]
-
-        for (i, sp) in enumerate(specimens):
-            sp_idx = specimen_ids.index(sp)
-            coo_data += [
-                (
-                    svc,
-                    (
-                        sp_idx,
-                        sequence_variants.index(
-                            file_seq_variants[j]
-                        ) 
-                    )
-                )
-                for (j, svc) in
-                enumerate(
-                    seqtab.rx(i+1, True)
-                )
-                if svc != 0
-            ]
-
-    logging.info("Converting to Sparse DataFrame")            
-    combined_seqtab_df = pd.DataFrame.sparse.from_spmatrix(
-            scipy.sparse.coo_matrix(
-            (
-                [d[0] for d in coo_data],
-                (
-                    [d[1][0] for d in coo_data],
-                    [d[1][1] for d in coo_data],
-                )
-            ),
-            dtype=int,
-            shape=(len(specimen_ids), len(sequence_variants))
-        ),
-        index=specimen_ids,
-        columns=sequence_variants,
-    )
+    combined_seqtab_df = load_seqtabs(seqtabs)
 
     if args.csv:
         logging.info("Writing combined seqtab to CSV")
@@ -121,17 +136,16 @@ def main():
         logging.info("Completed CSV output")
 
     if args.rds:
-        logging.info("Writing out RDS combined seqtab")
         logging.info("Converting back to R DataFrame")
+        R_base = importr('base')
         pandas2ri.activate()
-        combined_seqtab_R_df = ro.conversion.py2rpy(
-            combined_seqtab_df.sparse.to_dense()
-            )
-        logging.info("Converting into an R Matrix")
-        combined_seqtab_R_mat = R_base.as_matrix(combined_seqtab_R_df)
+        combined_seqtab_R_mat = R_base.as_matrix(
+            ro.conversion.py2rpy(combined_seqtab_df.astype(int))
+        )
         logging.info("Saving to RDS")
         R_base.saveRDS(combined_seqtab_R_mat, args.rds)
         logging.info("Completed RDS output")
+        pandas2ri.deactivate()
 
 # Boilerplate method to run this as a script
 if __name__ == '__main__':
