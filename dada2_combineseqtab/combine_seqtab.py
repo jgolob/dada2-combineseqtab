@@ -58,14 +58,14 @@ def load_seqtabs(seqtabs):
             continue
         # Implicit else
         file_specimens = set(stl.specimen)
-        file_seq_variants = list(stl.sv)
+        file_seq_variants = set(stl.sv)
         logging.info("Updating master lists and indicies of specimens and sequence variants.")
         if len(set(specimen_ids).intersection(file_specimens)) > 0:
             logging.warn("Duplicated specimen IDs encountered and will be combined")
         # Update the master lists of sv...
-        sequence_variants += [sv for sv in file_seq_variants if sv not in sequence_variants]
+        sequence_variants += [sv for sv in (file_seq_variants - set(sequence_variants))]
         # .. and specimens
-        specimen_ids += [sp for sp in file_specimens if sp not in specimen_ids]
+        specimen_ids += [sp for sp in (file_specimens - set(specimen_ids))]
         # and rapid lookup indicies
         sv_idx = {
             sv: i for (i, sv) in enumerate(sequence_variants)

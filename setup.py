@@ -2,7 +2,7 @@ from setuptools import setup
 
 setup(
     name='dada2-fast-combineseqtab',
-    version='0.6.5',
+    version='0.6.6',
     description="""Fast combination of sequence tables from DADA2
       """,
     url='',
