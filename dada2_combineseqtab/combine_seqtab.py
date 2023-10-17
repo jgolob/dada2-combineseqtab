@@ -141,7 +141,7 @@ def main():
         pandas2ri.activate()
         combined_seqtab_R_mat = R_base.as_matrix(
             ro.conversion.py2rpy(
-                combined_seqtab_df.astype(int)
+                combined_seqtab_df.astype(np.int32)
             )
         )
         logging.info("Saving to RDS")
