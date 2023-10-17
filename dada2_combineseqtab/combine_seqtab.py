@@ -132,7 +132,7 @@ def main():
 
     if args.csv:
         logging.info("Writing combined seqtab to CSV")
-        combined_seqtab_df.to_csv(args.csv)
+        combined_seqtab_df.sparse.to_dense().to_csv(args.csv)
         logging.info("Completed CSV output")
 
     if args.rds:
@@ -140,7 +140,9 @@ def main():
         R_base = importr('base')
         pandas2ri.activate()
         combined_seqtab_R_mat = R_base.as_matrix(
-            ro.conversion.py2rpy(combined_seqtab_df.astype(int))
+            ro.conversion.py2rpy(
+                combined_seqtab_df.astype(int)
+            )
         )
         logging.info("Saving to RDS")
         R_base.saveRDS(combined_seqtab_R_mat, args.rds)

@@ -1,6 +1,6 @@
 # dada2-fast-combineseqtab
 #
-# VERSION               golob/dada2-fast-combineseqtab:0.6.6
+# VERSION               golob/dada2-fast-combineseqtab:0.6.7
 
 
 FROM --platform=amd64 debian:bookworm-slim
